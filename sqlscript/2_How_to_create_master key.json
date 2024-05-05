@@ -1,0 +1,20 @@
+{
+	"name": "2_How_to_create_master key",
+	"properties": {
+		"folder": {
+			"name": "How to create Extrenal Table"
+		},
+		"content": {
+			"query": "CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Shreyas@141';",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "sample_db",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

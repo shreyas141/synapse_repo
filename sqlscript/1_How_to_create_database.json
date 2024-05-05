@@ -1,0 +1,20 @@
+{
+	"name": "1_How_to_create_database",
+	"properties": {
+		"folder": {
+			"name": "How to create Extrenal Table"
+		},
+		"content": {
+			"query": "CREATE DATABASE sample_db\nCOLLATE Latin1_General_100_BIN2_UTF8;",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

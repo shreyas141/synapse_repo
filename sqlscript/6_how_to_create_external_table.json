@@ -1,0 +1,20 @@
+{
+	"name": "6_how_to_create_external_table",
+	"properties": {
+		"folder": {
+			"name": "How to create Extrenal Table"
+		},
+		"content": {
+			"query": "CREATE EXTERNAL TABLE  sample_schema.sample_table\n(\nVendorID INT,\nIpep_pickup_datetime VARCHAR(100),\nIpep_dropoff_datetime VARCHAR(100),\nstore_and_fwd_flag VARCHAR(100),\nRatecodeID INT,\nPULocationID INT,\nDOLocationID INT,\npassenger_count INT,\ntrip_distance VARCHAR(100),\nfare_amount VARCHAR(100),\nextra VARCHAR(100),\nmta_tax VARCHAR(100),\ntip_amount VARCHAR(100),\ntolls_amount VARCHAR(100),\nehail_fee VARCHAR(100),\nimprovement_surcharge VARCHAR(100),\ntotal_amount VARCHAR(100),\npayment_type VARCHAR(100),\ntrip_type VARCHAR(100),\ncongestion_surcharge VARCHAR(100)\n)\nWITH(\n    LOCATION = 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/NYCTripSmall.parquet',\n    DATA_SOURCE = sample_source,\n    FILE_FORMAT = MyParquetFormat\n)",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "sample_db",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

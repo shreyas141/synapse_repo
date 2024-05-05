@@ -1,0 +1,20 @@
+{
+	"name": "4_How_to_CREATE_EXTERNAL_DATA_SOURCE",
+	"properties": {
+		"folder": {
+			"name": "How to create Extrenal Table"
+		},
+		"content": {
+			"query": "CREATE EXTERNAL DATA SOURCE sample_source\nWITH(\n    LOCATION = 'abfss://synapse-analytics-ws@covidgentwo.dfs.core.net',\n    CREDENTIAL = Mycredentials\n)",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "sample_db",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

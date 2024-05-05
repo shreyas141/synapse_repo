@@ -1,0 +1,17 @@
+{
+	"name": "featching_yearly_count_of_rides",
+	"properties": {
+		"content": {
+			"query": "SELECT\nYEAR(tpep_pickup_datetime) AS current_year,\nCOUNT(*) AS ride_per_year\nFROM\nOPENROWSET(\nBULK\n'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/yellow_tripdata_2024-01.parquet',\nFORMAT='PARQUET'\n) AS [nyc]\nGROUP BY YEAR(tpep_pickup_datetime)\nORDER BY 1 ASC",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
