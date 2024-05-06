@@ -1,0 +1,327 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "synapse-ws-bwt"
+		},
+		"synapse-ws-bwt-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapse-ws-bwt-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse-ws-bwt.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapse-ws-bwt-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://covidgentwo.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse-ws-bwt-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapse-ws-bwt-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse-ws-bwt-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('synapse-ws-bwt-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/1 explore_txi_zone')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/nyc_taxi_data/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',', -- Default is ',' just specified for knowledge\n        ROWTERMINATOR = '\\n',\n        HEADER_ROW = TRUE\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/1_How_to_create_database')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE DATABASE sample_db\nCOLLATE Latin1_General_100_BIN2_UTF8;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/2_How_to_create_master key')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'Shreyas@141';",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/3_How_to_create_scoped_credential')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE DATABASE SCOPED CREDENTIAL Mycredentials\nWITH \nIDENTITY = 'SHARED ACCESS SIGNATURE',\nSECRET = 'sp=racwdlme&st=2024-05-05T06:52:03Z&se=2024-05-05T14:52:03Z&spr=https&sv=2022-11-02&sr=c&sig=%2F3%2BLs32tDhLAoyDfGxCa5iH3zx8cVum32PCt8zu%2BnXs%3D'",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/4_How_to_CREATE_EXTERNAL_DATA_SOURCE')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE EXTERNAL DATA SOURCE sample_source\nWITH(\n    LOCATION = 'abfss://synapse-analytics-ws@covidgentwo.dfs.core.net',\n    CREDENTIAL = Mycredentials\n)",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/5_how_to_create_extrenal_file_format')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE EXTERNAL FILE FORMAT MyParquetFormat\nWITH (\n    FORMAT_TYPE = PARQUET,\n    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'\n);\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/6_how_to_create_external_table')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "How to create Extrenal Table"
+				},
+				"content": {
+					"query": "CREATE EXTERNAL TABLE  sample_schema.sample_table\n(\nVendorID INT,\nIpep_pickup_datetime VARCHAR(100),\nIpep_dropoff_datetime VARCHAR(100),\nstore_and_fwd_flag VARCHAR(100),\nRatecodeID INT,\nPULocationID INT,\nDOLocationID INT,\npassenger_count INT,\ntrip_distance VARCHAR(100),\nfare_amount VARCHAR(100),\nextra VARCHAR(100),\nmta_tax VARCHAR(100),\ntip_amount VARCHAR(100),\ntolls_amount VARCHAR(100),\nehail_fee VARCHAR(100),\nimprovement_surcharge VARCHAR(100),\ntotal_amount VARCHAR(100),\npayment_type VARCHAR(100),\ntrip_type VARCHAR(100),\ncongestion_surcharge VARCHAR(100)\n)\nWITH(\n    LOCATION = 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/NYCTripSmall.parquet',\n    DATA_SOURCE = sample_source,\n    FILE_FORMAT = MyParquetFormat\n)",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Demo Query Parquet files')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "demo"
+				},
+				"content": {
+					"query": "/* Covid-19 ECDC cases opendata set */\n\n/* Read parquet file */\nSELECT TOP 10 *\nFROM OPENROWSET(\n    BULK 'https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/ecdc_cases/latest/ecdc_cases.parquet',\n    FORMAT = 'parquet') as rows\n\n\n/* Explicitly specify schema */\nSELECT TOP 10 *\nFROM OPENROWSET(\n        BULK 'https://pandemicdatalake.blob.core.windows.net/public/curated/covid-19/ecdc_cases/latest/ecdc_cases.parquet',\n        FORMAT = 'parquet'\n    ) WITH ( date_rep date, cases int, geo_id varchar(6) ) as rows\n\n\n/* New York City Taxi opendata set */\n\n/* Query set of parquet files */\nSELECT\n    YEAR(tpepPickupDateTime),\n    passengerCount,\n    COUNT(*) AS cnt\nFROM\n    OPENROWSET(\n        BULK 'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow/puYear=2018/puMonth=*/*.snappy.parquet',\n        FORMAT='PARQUET'\n    ) WITH (\n        tpepPickupDateTime DATETIME2,\n        passengerCount INT\n    ) AS nyc\nGROUP BY\n    passengerCount,\n    YEAR(tpepPickupDateTime)\nORDER BY\n    YEAR(tpepPickupDateTime),\n    passengerCount;\n\n\n/* Automatic schema inference */\nSELECT TOP 10 *\nFROM\n    OPENROWSET(\n        BULK 'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow/puYear=2018/puMonth=*/*.snappy.parquet',\n        FORMAT='PARQUET'\n    ) AS nyc\n\n\n/* Query partitioned data */\nSELECT\n    YEAR(tpepPickupDateTime),\n    passengerCount,\n    COUNT(*) AS cnt\nFROM\n    OPENROWSET(\n        BULK 'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow/puYear=*/puMonth=*/*.snappy.parquet',\n        FORMAT='PARQUET'\n    ) nyc\nWHERE\n    nyc.filepath(1) = 2017\n    AND nyc.filepath(2) IN (1, 2, 3)\n    AND tpepPickupDateTime BETWEEN CAST('1/1/2017' AS datetime) AND CAST('3/31/2017' AS datetime)\nGROUP BY\n    passengerCount,\n    YEAR(tpepPickupDateTime)\nORDER BY\n    YEAR(tpepPickupDateTime),\n    passengerCount;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Demo Query Taxi Zones')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "demo"
+				},
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/demo/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/how_to_set_data_processing_limits')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "utils"
+				},
+				"content": {
+					"query": "-- How to fetch how much data we have processed in daily, monthly and yearly basis\nSELECT * FROM sys.dm_external_data_processed;\n\n-- How to see the data processed limits\nSELECT * FROM sys.configurations\nWHERE name LIKE 'Data Processed %';\n\n-- How to set data processed limits\nsp_set_data_processed_limit\n    @type = N'monthly', -- Like that we can write Daily, Weekly to set limits\n    @limit_tb = 4;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		}
+	]
+}
