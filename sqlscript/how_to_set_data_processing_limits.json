@@ -5,7 +5,7 @@
 			"name": "utils"
 		},
 		"content": {
-			"query": "-- How to fetch how much data we have processed in daily, monthly and yearly basis\nSELECT * FROM sys.dm_external_data_processed;\n\n-- How to see the data processed limits\nSELECT * FROM sys.configurations\nWHERE name LIKE 'Data Processed %';\n\n-- How to set data processed limits\nsp_set_data_processed_limit\n    @type = N'monthly', -- Like that we can write Daily, Weekly to set limits\n    @limit_tb = 4;",
+			"query": "-- How to fetch how much data we have processed in daily, monthly and yearly basis\nSELECT * FROM sys.dm_external_data_processed;\n\n-- How to see the data processed limits\nSELECT * FROM sys.configurations\nWHERE name LIKE 'Data Processed %';\n\n-- How to set data processed limits\nsp_set_data_processed_limit\n    @type = N'monthly', -- Like that we can write Daily, Weekly to set limits\n    @limit_tb = 4;\n\nsp_set_data_processed_limit\n    @type = N'daily', -- Like that we can write Weekly to set limits\n    @limit_tb = 1;",
 			"metadata": {
 				"language": "sql"
 			},
