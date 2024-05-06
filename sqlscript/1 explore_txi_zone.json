@@ -1,0 +1,20 @@
+{
+	"name": "1 explore_txi_zone",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/discovery"
+		},
+		"content": {
+			"query": "SELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/nyc_taxi_data/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',', -- Default is ',' just specified for knowledge\n        ROWTERMINATOR = '\\n',\n        HEADER_ROW = TRUE\n    ) AS [result]\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
