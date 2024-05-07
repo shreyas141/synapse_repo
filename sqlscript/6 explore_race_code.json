@@ -1,0 +1,20 @@
+{
+	"name": "6 explore_race_code",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/discovery"
+		},
+		"content": {
+			"query": "-- How to deal with standrad JSON Files\nSELECT \n    *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code.json',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'CSV',\n            FIELDTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b',\n            ROWTERMINATOR = '0x0b'\n        )\n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS [result1]\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        ) AS re2;\n\n-- How to deal with the Multiline Json\nSELECT *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code_multi_line.json',\n            FORMAT = 'CSV',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FIELDTERMINATOR = '0x0b',\n            ROWTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b'\n        ) \n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS re1\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        );\n        \n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
