@@ -1,0 +1,20 @@
+{
+	"name": "SQL script 1",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/discovery"
+		},
+		"content": {
+			"query": "SELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'payment_type.json',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FIELDTERMINATOR = '0x0b',\n        ROWTERMINATOR = '\\n'\n    ) AS [result]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
