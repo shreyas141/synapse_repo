@@ -1,0 +1,20 @@
+{
+	"name": "7 explore_trip_data_green",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/discovery"
+		},
+		"content": {
+			"query": "-- How to read Multiple files from a one folder\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/*.csv',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n-- How to Fetch multiple specific files\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        'trip_data_green_csv/year=2021/month=01/green_tripdata_2021-01.csv'),\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    lpep_pickup_datetime, COUNT(*)\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        'trip_data_green_csv/year=2021/month=01/green_tripdata_2021-01.csv'),\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result\n    GROUP BY lpep_pickup_datetime\n    ORDER BY lpep_pickup_datetime DESC;\n\n-- How to featch recursive location files\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/**',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n--How To Fetch All Year, Month Files from location\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n-- How to get Metadata of file\nSELECT \n    result.filename() AS file_name,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    result.filename() AS file_name,\n    result.filepath() AS file_path,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n--How to get specific information from path\nSELECT \n    result.filename() AS file_name,\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    result.filename() AS file_name,\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    count(1) AS total_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result\n    GROUP BY result.filename(), result.filepath(1), result.filepath(2);",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
