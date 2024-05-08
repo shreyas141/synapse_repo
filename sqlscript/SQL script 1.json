@@ -5,7 +5,7 @@
 			"name": "Assignments"
 		},
 		"content": {
-			"query": "--Query From Folder Using Wildcard Path\nSELECT  \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS results;\n\n--Use File Name Function\nSELECT  \n    result.filename()\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS result;",
+			"query": "--Query From Folder Using Wildcard Path\nSELECT  \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/*.parquet',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS results;\n\n-- Query from subfolders\nSELECT  \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS results;\n\n--Use File Name Function\nSELECT  \n    result.filename()\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS result;\n\n\n-- use file path to target partition\nSELECT  \n    result.filename() AS file_name, \n    result.filepath(1) AS year,\n    result.filepath(2) AS month\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=*/month=*/*.parquet',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS result\n    WHERE result.filepath(1) = '2020' and result.filepath(2) = '01'\n    ORDER BY result.filepath(1) DESC;\n\n",
 			"metadata": {
 				"language": "sql"
 			},
