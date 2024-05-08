@@ -5,7 +5,7 @@
 			"name": "nyc taxi/discovery"
 		},
 		"content": {
-			"query": "SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=*/month=*/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS [result];\n    \nEXEC sp_describe_first_result_set N'SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK ''trip_data_green_parquet/year=*/month=*/'',\n            DATA_SOURCE = ''nyc_taxi_data_raw'',\n            FORMAT = ''PARQUET''\n        ) AS [result];'",
+			"query": "SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=*/month=*/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS [result];\n    \nEXEC sp_describe_first_result_set N'SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK ''trip_data_green_parquet/year=*/month=*/'',\n            DATA_SOURCE = ''nyc_taxi_data_raw'',\n            FORMAT = ''PARQUET''\n        ) AS [result];'\n\n",
 			"metadata": {
 				"language": "sql"
 			},
