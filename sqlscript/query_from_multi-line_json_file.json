@@ -1,0 +1,20 @@
+{
+	"name": "query_from_multi-line_json_file",
+	"properties": {
+		"folder": {
+			"name": "Assignments"
+		},
+		"content": {
+			"query": "-- How to deal with the Multiline Json\nSELECT *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code_multi_line.json',\n            FORMAT = 'CSV',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FIELDTERMINATOR = '0x0b',\n            ROWTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b'\n        ) \n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS re1\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        );",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

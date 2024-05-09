@@ -1,5 +1,5 @@
 {
-	"name": "SQL script 1",
+	"name": "Query From Folder Using Wildcard Path",
 	"properties": {
 		"folder": {
 			"name": "Assignments"
