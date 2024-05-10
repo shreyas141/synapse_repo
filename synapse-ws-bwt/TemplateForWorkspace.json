@@ -117,6 +117,98 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/10 check_for_duplicates')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT\n    result.location_id,\n    COUNT(1) as number_of_records\nFROM\n    OPENROWSET(\n        BULK 'taxi_zone.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2,\n        FIELDTERMINATOR = ',',\n        ROWTERMINATOR = '\\n'\n    ) \n    WITH (\n        location_id SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n    )AS [result]\n    GROUP BY result.location_id\n    HAVING COUNT(1) > 1;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/11 data_quality_check')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- Identify any data quality issues in trip total amount\n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]    \n  \nSELECT\n    MIN(total_amount) AS min_total_amount,\n    MAX(total_amount) AS max_total_amount,\n    AVG (total_amount) AS avg_total_amount,\n    COUNT(1) AS total_number_of_records,\n    COUNT(total_amount) AS not_null_total_number_of_records\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]  \n\nSELECT\n    payment_type, COUNT(1) AS number_of_records\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result] \n-- WHERE total_amount < 0 \nGROUP BY payment_type\nORDER BY payment_type;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/12 join_data')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT \n    *\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=2020/month=01/*.parquet',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS trip_data\n        JOIN\n        OPENROWSET(\n            BULK 'taxi_zone.csv',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'CSV',\n            fieldterminator = ',',\n            ROWTERMINATOR = '\\n',\n            PARSER_VERSION = '2.0',\n            FIRSTROW = 2\n        ) \n        WITH(\n            location_id SMALLINT 1,\n            borough VARCHAR(15) 2,\n            zone VARCHAR(50) 3,\n            service_zone VARCHAR(15) 4\n        ) AS taxi_zone\n        ON taxi_zone.location_id = trip_data.PULocationID;\n\n\nSELECT \n    taxi_zone.borough, COUNT(1) AS total_trips\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=2020/month=01/*.parquet',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS trip_data\n        JOIN\n        OPENROWSET(\n            BULK 'taxi_zone.csv',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'CSV',\n            fieldterminator = ',',\n            ROWTERMINATOR = '\\n',\n            PARSER_VERSION = '2.0',\n            FIRSTROW = 2\n        ) \n        WITH(\n            location_id SMALLINT 1,\n            borough VARCHAR(15) 2,\n            zone VARCHAR(50) 3,\n            service_zone VARCHAR(15) 4\n        ) AS taxi_zone\n        ON taxi_zone.location_id = trip_data.PULocationID\n        GROUP BY taxi_zone.borough\n        ORDER BY 1 DESC;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/13 simple_transformations')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT \n    lpep_pickup_datetime,\n    lpep_dropoff_datetime,\n    CONCAT(CAST(\n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) AS VARCHAR(10)), ' ', 'min') AS Duration\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=2020/month=01/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS result;\n\nSELECT \n        lpep_pickup_datetime,\n        lpep_dropoff_datetime,\n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60 AS from_hour,\n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60 + 1 AS to_hour\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=2020/month=01/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS result;\n\nSELECT \n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60 AS from_hour,\n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60 + 1 AS to_hour,\n        COUNT(1) AS num_of_trips\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=2020/month=01/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS result\n        GROUP BY DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60,\n        DATEDIFF(MINUTE, result.lpep_pickup_datetime, result.lpep_dropoff_datetime) /60 + 1;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/1_How_to_create_database')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -131,6 +223,29 @@
 					},
 					"currentConnection": {
 						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/2 explore_calendar')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "EXEC sp_describe_first_result_set N'SELECT \n    *\nFROM \n    OPENROWSET (\n        BULK ''calendar.csv'',\n        DATA_SOURCE = ''nyc_taxi_data_raw'',\n        FORMAT = ''CSV'',\n        PARSER_VERSION = ''2.0'',\n        FIELDTERMINATOR = '','',\n        HEADER_ROW = TRUE\n    ) AS [result] '\n\nSELECT \n    MAX(LEN(date_key)) AS date_key_len,\n    MAX(LEN(year)) AS year_len,\n    MAX(LEN(month)) AS month_len,\n    MAX(LEN(day)) AS day_len,\n    MAX(LEN(day_name)) AS day_name_len,\n    MAX(LEN(day_of_year)) AS day_of_year_len,\n    MAX(LEN(week_of_year)) AS week_of_year_len,\n    MAX(LEN(month_name)) AS month_name_len,\n    MAX(LEN(year_month)) AS year_month_len,\n    MAX(LEN(year_week)) AS year_week_len\nFROM \n    OPENROWSET (\n        BULK 'calendar.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\nSELECT \n    *\nFROM \n    OPENROWSET (\n        BULK 'calendar.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',',\n        FIRST_ROW = 2\n    ) \n    WITH(\n        date_key INT,\n        date DATE,\n        year INT,\n        month INT,\n        day INT,\n        day_name VARCHAR(15),\n        day_of_year INT,\n        week_of_month TINYINT,\n        week_of_year INT,\n        month_name VARCHAR(15),\n        year_month INT,\n        year_week INT\n    ) AS [result]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
@@ -163,6 +278,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/3 explore_vendors')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor_unquoted.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS vend;\n\nSELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor_escaped.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        ESCAPECHAR = '\\\\'\n    ) AS vend;\n\nSELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        FIELDQUOTE = '\"'\n    ) AS vend;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/3_How_to_create_scoped_credential')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -177,6 +315,29 @@
 					},
 					"currentConnection": {
 						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/4 explore_trip_type')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_type.tsv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '\\t',\n        HEADER_ROW = TRUE,\n        PARSER_VERSION = '2.0'\n    ) AS [trip_type]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
@@ -209,6 +370,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/5 payment_type')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "-- How to read json \nSELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0a'\n    ) \n    WITH(\n        jsonObject NVARCHAR(MAX)\n    )AS [result]\n\n-- How to extract column_name and values using JSON_VALUE function\n    SELECT \n    CAST(JSON_VALUE(jsonObject, '$.payment_type') AS SMALLINT) payment_type,\n    CAST(JSON_VALUE(jsonObject, '$.payment_type_desc') AS VARCHAR(20)) payment_type_desc\nFROM \n    OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0a'\n    ) \n    WITH(\n        jsonObject NVARCHAR(MAX)\n    )AS [result]\n\n-- How to fetch dataset in tabulor format using OPEN_JSON function with single line json\nSELECT *\nFROM\n    OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        ROWTERMINATOR = '0x0a',\n        FIELDQUOTE = '0x0b'\n    )\n    WITH (\n        jsonDoc NVARCHAR(MAX)\n    ) AS payment_type\n    CROSS APPLY OPENJSON(jsonDoc)\n\nSELECT payment_type,\n       payment_type_desc\nFROM\n    OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        ROWTERMINATOR = '0x0a',\n        FIELDQUOTE = '0x0b'\n    )\n    WITH (\n        jsonDoc NVARCHAR(MAX)\n    ) AS payment_type\n    CROSS APPLY OPENJSON(jsonDoc)\n    WITH(\n        payment_type SMALLINT,\n        payment_type_desc VARCHAR(20)\n    )\n    AS [result]\n\n-- How to Rename the column name\nSELECT payment_type,\n       information\nFROM\n    OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        ROWTERMINATOR = '0x0a',\n        FIELDQUOTE = '0x0b'\n    )\n    WITH (\n        jsonDoc NVARCHAR(MAX)\n    ) AS payment_type\n    CROSS APPLY OPENJSON(jsonDoc)\n    WITH(\n        payment_type SMALLINT,\n        information VARCHAR(20) '$.payment_type_desc'\n    )\n    AS [result]\n\n--How to deal with array type value in JSON\nSELECT \n    CAST(JSON_VALUE(jsonDoc, '$.payment_type') AS SMALLINT) payment_type,\n    CAST(JSON_VALUE(jsonDoc, '$.payment_type_desc[0].value') AS VARCHAR(20)) payment_type_desc\nFROM \n    OPENROWSET(\n        BULK 'payment_type_array.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR = '0x0b'\n    )\n    WITH(\n        jsonDoc NVARCHAR(MAX)\n    ) AS pyment_type_arr;\n\nSELECT \n    payment_type,\n    payment_type_info\n    FROM \n        OPENROWSET(\n            BULK 'payment_type_array.json',\n            FORMAT = 'CSV',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FIELDTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b'\n        )\n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS pymnt_arr\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            payment_type SMALLINT,\n            payment_type_desc NVARCHAR(MAX) AS JSON\n        ) AS pymnt_list\n        CROSS APPLY OPENJSON(payment_type_desc)\n        WITH(\n            payment_type_info VARCHAR(20) '$.value'\n        ) AS [result]\n\n\n        ",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/5_how_to_create_extrenal_file_format')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -232,6 +416,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/6 explore_race_code')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "-- How to deal with standrad JSON Files\nSELECT \n    *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code.json',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'CSV',\n            FIELDTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b',\n            ROWTERMINATOR = '0x0b'\n        )\n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS [result1]\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        ) AS re2;\n\n-- How to deal with the Multiline Json\nSELECT *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code_multi_line.json',\n            FORMAT = 'CSV',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FIELDTERMINATOR = '0x0b',\n            ROWTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b'\n        ) \n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS re1\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        );\n        \n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/6_how_to_create_external_table')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -246,6 +453,75 @@
 					},
 					"currentConnection": {
 						"databaseName": "sample_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/7 explore_trip_data_green')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "-- How to read Multiple files from a one folder\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/*.csv',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n-- How to Fetch multiple specific files\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        'trip_data_green_csv/year=2021/month=01/green_tripdata_2021-01.csv'),\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    lpep_pickup_datetime, COUNT(*)\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        'trip_data_green_csv/year=2021/month=01/green_tripdata_2021-01.csv'),\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result\n    GROUP BY lpep_pickup_datetime\n    ORDER BY lpep_pickup_datetime DESC;\n\n-- How to featch recursive location files\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/**',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n--How To Fetch All Year, Month Files from location\nSELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n-- How to get Metadata of file\nSELECT \n    result.filename() AS file_name,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    result.filename() AS file_name,\n    result.filepath() AS file_path,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\n--How to get specific information from path\nSELECT \n    result.filename() AS file_name,\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result;\n\nSELECT \n    result.filename() AS file_name,\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    count(1) AS total_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*',\n        FORMAT = 'CSV',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS result\n    GROUP BY result.filename(), result.filepath(1), result.filepath(2);",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/8 explore_trip_data_green_parquet')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK 'trip_data_green_parquet/year=*/month=*/',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'PARQUET'\n        ) AS [result];\n    \nEXEC sp_describe_first_result_set N'SELECT  \n    *\n    FROM \n        OPENROWSET(\n            BULK ''trip_data_green_parquet/year=*/month=*/'',\n            DATA_SOURCE = ''nyc_taxi_data_raw'',\n            FORMAT = ''PARQUET''\n        ) AS [result];'\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/9 explore_trip_data_green_delta')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "nyc taxi/discovery"
+				},
+				"content": {
+					"query": "SELECT TOP 100\n    *\nFROM \n    OPENROWSET(\n        BULK 'trip_data_green_delta/',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'DELTA'\n    ) AS result;\n\nSELECT TOP 100\n    *\nFROM \n    OPENROWSET(\n        BULK 'trip_data_green_delta/',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'DELTA'\n    ) AS result\n    WHERE year = '2020';",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
@@ -301,6 +577,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/Query From Folder Using Wildcard Path')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "Assignments"
+				},
+				"content": {
+					"query": "--Query From Folder Using Wildcard Path\nSELECT  \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/*.parquet',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS results;\n\n-- Query from subfolders\nSELECT  \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS results;\n\n--Use File Name Function\nSELECT  \n    result.filename()\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS result;\n\n\n-- use file path to target partition\nSELECT  \n    result.filename() AS file_name, \n    result.filepath(1) AS year,\n    result.filepath(2) AS month\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=*/month=*/*.parquet',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'PARQUET'\n    ) AS result\n    WHERE result.filepath(1) = '2020' and result.filepath(2) = '01'\n    ORDER BY result.filepath(1) DESC;\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/how_to_set_data_processing_limits')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -324,20 +623,20 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/2 explore_calendar')]",
+			"name": "[concat(parameters('workspaceName'), '/query_from_multi-line_json_file')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
 				"folder": {
-					"name": "nyc taxi/discovery"
+					"name": "Assignments"
 				},
 				"content": {
-					"query": "EXEC sp_describe_first_result_set N'SELECT \n    *\nFROM \n    OPENROWSET (\n        BULK ''calendar.csv'',\n        DATA_SOURCE = ''nyc_taxi_data_raw'',\n        FORMAT = ''CSV'',\n        PARSER_VERSION = ''2.0'',\n        FIELDTERMINATOR = '','',\n        HEADER_ROW = TRUE\n    ) AS [result] '\n\nSELECT \n    MAX(LEN(date_key)) AS date_key_len,\n    MAX(LEN(year)) AS year_len,\n    MAX(LEN(month)) AS month_len,\n    MAX(LEN(day)) AS day_len,\n    MAX(LEN(day_name)) AS day_name_len,\n    MAX(LEN(day_of_year)) AS day_of_year_len,\n    MAX(LEN(week_of_year)) AS week_of_year_len,\n    MAX(LEN(month_name)) AS month_name_len,\n    MAX(LEN(year_month)) AS year_month_len,\n    MAX(LEN(year_week)) AS year_week_len\nFROM \n    OPENROWSET (\n        BULK 'calendar.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\nSELECT \n    *\nFROM \n    OPENROWSET (\n        BULK 'calendar.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIELDTERMINATOR = ',',\n        FIRST_ROW = 2\n    ) \n    WITH(\n        date_key INT,\n        date DATE,\n        year INT,\n        month INT,\n        day INT,\n        day_name VARCHAR(15),\n        day_of_year INT,\n        week_of_month TINYINT,\n        week_of_year INT,\n        month_name VARCHAR(15),\n        year_month INT,\n        year_week INT\n    ) AS [result]",
+					"query": "-- How to deal with the Multiline Json\nSELECT *\n    FROM\n        OPENROWSET(\n            BULK 'rate_code_multi_line.json',\n            FORMAT = 'CSV',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FIELDTERMINATOR = '0x0b',\n            ROWTERMINATOR = '0x0b',\n            FIELDQUOTE = '0x0b'\n        ) \n        WITH(\n            jsonDoc NVARCHAR(MAX)\n        ) AS re1\n        CROSS APPLY OPENJSON(jsonDoc)\n        WITH(\n            rate_code_id TINYINT,\n            rate_code VARCHAR(20)\n        );",
 					"metadata": {
 						"language": "sql"
 					},
 					"currentConnection": {
-						"databaseName": "nyc_taxi_discovery",
+						"databaseName": "master",
 						"poolName": "Built-in"
 					},
 					"resultLimit": 5000
@@ -347,46 +646,17 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/3 explore_vendors')]",
+			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
 				"folder": {
-					"name": "nyc taxi/discovery"
+					"name": "Assignments"
 				},
 				"content": {
-					"query": "SELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor_unquoted.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS vend;\n\nSELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor_escaped.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        ESCAPECHAR = '\\\\'\n    ) AS vend;\n\nSELECT \n    *\nFROM \n    OPENROWSET(\n        BULK 'vendor.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        FIELDQUOTE = '\"'\n    ) AS vend;\n",
 					"metadata": {
 						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "nyc_taxi_discovery",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
-				},
-				"type": "SqlQuery"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/4 explore_trip_type')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"folder": {
-					"name": "nyc taxi/discovery"
-				},
-				"content": {
-					"query": "SELECT \n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_type.tsv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '\\t',\n        HEADER_ROW = TRUE,\n        PARSER_VERSION = '2.0'\n    ) AS [trip_type]",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "nyc_taxi_discovery",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
+					}
 				},
 				"type": "SqlQuery"
 			},
