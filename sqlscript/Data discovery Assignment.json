@@ -1,0 +1,20 @@
+{
+	"name": "Data discovery Assignment",
+	"properties": {
+		"folder": {
+			"name": "Assignments"
+		},
+		"content": {
+			"query": "WITH cte_payment_type AS(\n        SELECT \n                payment_type,\n                payment_method\n                FROM \n                    OPENROWSET(\n                        BULK 'payment_type_array.json',\n                        DATA_SOURCE = 'nyc_taxi_data_raw',\n                        FORMAT = 'CSV',\n                        FIELDTERMINATOR = '0x0b',\n                        ROWTERMINATOR = '0x0a',\n                        FIELDQUOTE = '0x0b'\n                    )\n                    WITH(\n                        jsonDoc NVARCHAR(MAX)\n                    ) AS re0\n                    CROSS APPLY OPENJSON(jsonDoc)\n                    WITH(\n                        payment_type int,\n                        payment_type_desc NVARCHAR(MAX) AS JSON\n                    ) AS re1\n                    CROSS APPLY OPENJSON(payment_type_desc)\n                    WITH(\n                        payment_method VARCHAR(20) '$.value'\n                    ) AS re2\n    )\n    SELECT \n        taxi_zone.borough,\n        COUNT(1) AS total_trips,\n        SUM(CASE WHEN cte_payment_type.payment_method = 'Cash' THEN 1 ELSE 0 END) AS total_cash_trips,\n        CAST(SUM(CASE WHEN cte_payment_type.payment_method = 'Cash' THEN 1 ELSE 0 END)/CAST(COUNT(1) AS DECIMAL)*100 AS DECIMAL(5,2)) AS cash_trip_percentage,\n        SUM(CASE WHEN cte_payment_type.payment_method = 'Credit card' THEN 1 ELSE 0 END) AS total_card_trip,\n        CAST(SUM(CASE WHEN cte_payment_type.payment_method = 'Credit card' THEN 1 ELSE 0 END)/CAST(COUNT(1) AS DECIMAL)*100 AS DECIMAL(5,2)) AS card_trip_percentage\n        FROM \n            OPENROWSET(\n                BULK 'taxi_zone.csv',\n                DATA_SOURCE = 'nyc_taxi_data_raw',\n                FORMAT = 'CSV',\n                PARSER_VERSION = '2.0',\n                HEADER_ROW = TRUE\n            )\n            WITH (\n                location_id SMALLINT 1,\n                borough VARCHAR(15) 2,\n                zone VARCHAR(50) 3,\n                service_zone VARCHAR(15) 4\n            )AS taxi_zone\n            LEFT JOIN\n            OPENROWSET(\n                BULK 'trip_data_green_parquet/year=2020/month=01/',\n                DATA_SOURCE = 'nyc_taxi_data_raw',\n                FORMAT = 'PARQUET'\n            ) AS trip_data\n            ON trip_data.PULocationID = taxi_zone.location_id\n            JOIN cte_payment_type\n            ON cte_payment_type.payment_type = trip_data.payment_type\n            GROUP BY taxi_zone.borough;",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
