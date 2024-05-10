@@ -1,0 +1,20 @@
+{
+	"name": "2_create_external_data_sourxe",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/ldw"
+		},
+		"content": {
+			"query": "USE nyc_taxi_ldw;\n\nCREATE EXTERNAL DATA SOURCE nyc_taxi_src\nWITH\n(\n    LOCATION = 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/nyc_taxi_data/'\n);",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_ldw",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
