@@ -5,7 +5,7 @@
 			"name": "nyc taxi/ldw"
 		},
 		"content": {
-			"query": "USE nyc_taxi_ldw;\n\nIF NOT EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'nyc_taxi_src')\n    CREATE EXTERNAL DATA SOURCE nyc_taxi_src\n    WITH\n    (\n        LOCATION = 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/nyc_taxi_data/'\n    );",
+			"query": "USE nyc_taxi_ldw;\n\nIF NOT EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'nyc_taxi_src')\n    CREATE EXTERNAL DATA SOURCE nyc_taxi_src\n    WITH\n    (\n        LOCATION = 'https://covidgentwo.dfs.core.windows.net/synapse-analytics-ws/nyc_taxi_data/'\n    );\n\n",
 			"metadata": {
 				"language": "sql"
 			},
