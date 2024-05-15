@@ -5,12 +5,20 @@
 			"referenceName": "ls_covidgentwo",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"p_file_path": {
+				"type": "String"
+			}
+		},
 		"annotations": [],
 		"type": "Parquet",
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"folderPath": "nyc_taxi_data/silver/taxi_zone",
+				"folderPath": {
+					"value": "@concat('nyc_taxi_data/', dataset().p_file_path)",
+					"type": "Expression"
+				},
 				"fileSystem": "synapse-analytics-ws"
 			},
 			"compressionCodec": "snappy"
