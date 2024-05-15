@@ -1,0 +1,19 @@
+{
+	"name": "ds_usp_lookup",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_covidgentwo",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "usp_lookup.txt",
+				"folderPath": "nyc_taxi_data/lookup",
+				"fileSystem": "synapse-analytics-ws"
+			}
+		}
+	}
+}
