@@ -1,27 +1,18 @@
 {
-	"name": "ds_silver_taxi_data_dynamic",
+	"name": "ds_silver_taxi_zone",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_covidgentwo",
 			"type": "LinkedServiceReference"
-		},
-		"parameters": {
-			"p_file_path": {
-				"type": "String"
-			}
 		},
 		"annotations": [],
 		"type": "Parquet",
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"folderPath": {
-					"value": "@concat('nyc_taxi_data/', dataset().p_file_path)",
-					"type": "Expression"
-				},
+				"folderPath": "nyc_taxi_data/silver/taxi_zone",
 				"fileSystem": "synapse-analytics-ws"
-			},
-			"compressionCodec": "snappy"
+			}
 		},
 		"schema": [
 			{
