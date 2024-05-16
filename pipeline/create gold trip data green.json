@@ -133,6 +133,56 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "create gold trp data green view",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ForEach_month_and_year",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_synapse_serverless_sql_pool_db_nyc_taxi_ldw",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "USE nyc_taxi_ldw;",
+								"type": "Expression"
+							}
+						},
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "DROP VIEW IF EXISTS gold.vw_trip_data_green;",
+								"type": "Expression"
+							}
+						},
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "CREATE VIEW gold.vw_trip_data_green\nAS\nSELECT\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'gold/trip_data_green/year=*/month=*/*.parquet',\n        DATA_SOURCE = 'nyc_taxi_src',\n        FORMAT = 'PARQUET'\n    )\n    WITH(\n        borough VARCHAR(15),\n        trip_date DATE,\n        trip_day VARCHAR(10),\n        is_weekend CHAR(1),\n        total_card_payment_count INT,\n        total_cash_payments_count INT,\n        total_street_hail_trip_count INT,\n        total_dispatch_trip_count INT,\n        trip_distance FLOAT,\n        trip_duration VARCHAR(30),\n        fare_amount FLOAT\n    ) AS result;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
 			}
 		],
 		"annotations": []
