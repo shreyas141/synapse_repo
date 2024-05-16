@@ -5,6 +5,9 @@
 			"referenceName": "ls_covidgentwo",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "demo"
+		},
 		"annotations": [],
 		"type": "Parquet",
 		"typeProperties": {
@@ -12,7 +15,8 @@
 				"type": "AzureBlobFSLocation",
 				"folderPath": "nyc_taxi_data/silver/taxi_zone",
 				"fileSystem": "synapse-analytics-ws"
-			}
+			},
+			"compressionCodec": "snappy"
 		},
 		"schema": [
 			{
