@@ -71,6 +71,9 @@
 				}
 			}
 		],
+		"folder": {
+			"name": "demo"
+		},
 		"annotations": []
 	}
 }
