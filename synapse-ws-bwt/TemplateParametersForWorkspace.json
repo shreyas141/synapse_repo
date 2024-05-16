@@ -5,8 +5,14 @@
 		"workspaceName": {
 			"value": "synapse-ws-bwt"
 		},
+		"ls_synapse_serverless_sql_pool_db_nyc_taxi_ldw_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse-ws-bwt-ondemand.sql.azuresynapse.net;Initial Catalog=nyc_taxi_ldw"
+		},
 		"synapse-ws-bwt-WorkspaceDefaultSqlServer_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse-ws-bwt.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"ls_covidgentwo_properties_typeProperties_url": {
+			"value": "https://covidgentwo.dfs.core.windows.net/"
 		},
 		"synapse-ws-bwt-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://covidgentwo.dfs.core.windows.net"
