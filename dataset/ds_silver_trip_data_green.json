@@ -1,0 +1,29 @@
+{
+	"name": "ds_silver_trip_data_green",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_covidgentwo",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"year": {
+				"type": "String"
+			},
+			"month": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "nyc_taxi_data/silver/trip_data_green/year=@{dataset().year}/month=@{dataset().month}",
+					"type": "Expression"
+				},
+				"fileSystem": "synapse-analytics-ws"
+			}
+		}
+	}
+}

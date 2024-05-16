@@ -1,0 +1,76 @@
+{
+	"name": "create_silver_taxi_zone",
+	"properties": {
+		"activities": [
+			{
+				"name": "delete_silver_taxi_zone_files",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_silver_taxi_zone",
+						"type": "DatasetReference"
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "create_taxi_zones",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "delete_silver_taxi_zone_files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_synapse_serverless_sql_pool_db_nyc_taxi_ldw",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "IF OBJECT_ID('silver.taxi_zone') IS NOT NULL\n    DROP EXTERNAL TABLE silver.taxi_zone;\n",
+								"type": "Expression"
+							}
+						},
+						{
+							"type": "NonQuery",
+							"text": {
+								"value": "CREATE EXTERNAL TABLE silver.taxi_zone\n    WITH(\n        DATA_SOURCE = nyc_taxi_src,\n        LOCATION = 'silver/taxi_zone',\n        FILE_FORMAT = parquet_file_format\n    )\n    AS\n        SELECT \n            *\n            FROM bronze.taxi_zone;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"annotations": []
+	}
+}

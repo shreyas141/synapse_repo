@@ -1,0 +1,20 @@
+{
+	"name": "14_create_gold_trip_data_green",
+	"properties": {
+		"folder": {
+			"name": "nyc taxi/ldw"
+		},
+		"content": {
+			"query": "USE nyc_taxi_ldw\nGO\n\n/*\nSELECT \n    td.year,\n    td.month,\n    tz.borough,\n    CONVERT(DATE, td.lpep_pickup_datetime) AS trip_date,\n    CONVERT(DATE, td.lpep_dropoff_datetime) AS trip_date_dropoff,\n    cal.day_name AS trip_day,\n    td.trip_type,\n    tt.trip_type_desc,\n    CASE WHEN cal.day_name IN ('Sunday', 'Saturday') THEN 'Y' ELSE 'N' END AS is_weekend,\n    SUM(CASE WHEN pt.payment_type_desc = 'Credit card' THEN 1 ELSE 0 END) AS total_card_payment_count,\n    SUM(CASE WHEN pt.payment_type_desc = 'Cash' THEN 1 ELSE 0 END) AS total_cash_payments_count,\n    SUM(CASE WHEN tt.trip_type_desc = 'Street-hail' THEN 1 ELSE 0 END) AS total_street_hail_trip_count,\n    SUM(CASE WHEN tt.trip_type_desc = 'Dispatch' THEN 1 ELSE 0 END) AS total_dispatch_trip_count,\n    SUM(td.trip_distance) AS trip_distance,\n    CONCAT(CONCAT(CONVERT(VARCHAR(10), DATEDIFF(MINUTE, CONVERT(DATE, td.lpep_pickup_datetime), CONVERT(DATE, td.lpep_dropoff_datetime))/60), ' ', 'hrs') ,\n    ' to ',\n    CONCAT(CONVERT(VARCHAR(10), DATEDIFF(MINUTE, CONVERT(DATE, td.lpep_pickup_datetime), CONVERT(DATE, td.lpep_dropoff_datetime))/60+1), ' ', 'hrs') )AS trip_duration,\n    SUM(td.fare_amount) AS fare_amount\nFROM\n    silver.vw_trip_data_green td\nJOIN\n    silver.taxi_zone tz\nON  td.pu_location_id = tz.location_id\nJOIN\n    silver.calender cal \nON cal.date = CONVERT(DATE, td.lpep_pickup_datetime)\nJOIN \n    silver.payment_type pt\nON td.payment_type = pt.payment_type\nJOIN\n    silver.trip_type tt\nON td.trip_type = tt.trip_type\nWHERE\n    CONVERT(INT, td.year) = 2020\n    AND\n    CONVERT(INT, td.month) = 01\nGROUP BY\n    td.year,\n    td.month,\n    tz.borough,\n    td.trip_type,\n    tt.trip_type_desc,\n    CONVERT(DATE, td.lpep_pickup_datetime),\n    CONVERT(DATE, td.lpep_dropoff_datetime),\n    cal.day_name;\n*/\n\nEXEC gold.usp_gold_trip_data_green '2020', '01'\nEXEC gold.usp_gold_trip_data_green '2020', '02'\nEXEC gold.usp_gold_trip_data_green '2020', '03'\nEXEC gold.usp_gold_trip_data_green '2020', '04'\nEXEC gold.usp_gold_trip_data_green '2020', '05'\nEXEC gold.usp_gold_trip_data_green '2020', '06'\nEXEC gold.usp_gold_trip_data_green '2020', '07'\nEXEC gold.usp_gold_trip_data_green '2020', '08'\nEXEC gold.usp_gold_trip_data_green '2020', '09'\nEXEC gold.usp_gold_trip_data_green '2020', '10'\nEXEC gold.usp_gold_trip_data_green '2020', '11'\nEXEC gold.usp_gold_trip_data_green '2020', '12'\nEXEC gold.usp_gold_trip_data_green '2021', '01'\nEXEC gold.usp_gold_trip_data_green '2021', '02'\nEXEC gold.usp_gold_trip_data_green '2021', '03'\nEXEC gold.usp_gold_trip_data_green '2021', '04'\nEXEC gold.usp_gold_trip_data_green '2021', '05'\nEXEC gold.usp_gold_trip_data_green '2021', '06'\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_ldw",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
